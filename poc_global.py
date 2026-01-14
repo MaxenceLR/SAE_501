@@ -141,12 +141,18 @@ def insert_demandes(num, codes, conn=connection):
 
 
 def insert_solutions(num, codes, conn=connection):
-    if not codes: return
-    cursor = connection.cursor()
+    if not codes:
+        return
+    cursor = conn.cursor()
     try:
-        cursor.executemany("INSERT INTO solution (num, pos, nature) VALUES (%s,%s,%s)", [(num, i+1, c) for i,c in enumerate(codes)])
-        connection.commit()
-    finally: cursor.close()
+        cursor.executemany(
+            "INSERT INTO solution (num, pos, nature) VALUES (%s,%s,%s)",
+            [(num, i + 1, c) for i, c in enumerate(codes)]
+        )
+        conn.commit()
+    finally:
+        cursor.close()
+
 
 # =================================================================
 # 📊 LOGIQUE VISUALISATION (REPRISE DE TON POC REPORTING)
