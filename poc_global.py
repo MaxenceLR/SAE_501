@@ -94,28 +94,51 @@ def get_demande_solution_modalites():
 
 # Fonctions d'insertion (Entretien, Demandes, Solutions)
 def insert_full_entretien(data, conn=connection):
-    cursor = connection.cursor()
+    cursor = conn.cursor()
     try:
         cursor.execute("""
             INSERT INTO entretien (date_ent, mode, duree, sexe, age, vient_pr, sit_fam, enfant, modele_fam, profession, ress, origine, commune, partenaire)
             VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING num
-        """, (date.today(), data.get('mode'), data.get('duree'), data.get('sexe'), data.get('age'), data.get('vient_pr'), data.get('sit_fam'), data.get('enfant'), data.get('modele_fam'), data.get('profession'), data.get('ress'), data.get('origine'), data.get('commune'), data.get('partenaire')))
+        """, (
+            date.today(),
+            data.get('mode'),
+            data.get('duree'),
+            data.get('sexe'),
+            data.get('age'),
+            data.get('vient_pr'),
+            data.get('sit_fam'),
+            data.get('enfant'),
+            data.get('modele_fam'),
+            data.get('profession'),
+            data.get('ress'),
+            data.get('origine'),
+            data.get('commune'),
+            data.get('partenaire')
+        ))
         new_num = cursor.fetchone()[0]
-        connection.commit()
+        conn.commit()
         return new_num
     except Exception as e:
-        connection.rollback()
+        conn.rollback()
         st.error(f"Erreur insertion : {e}")
         return None
-    finally: cursor.close()
+    finally:
+        cursor.close()
+
 
 def insert_demandes(num, codes, conn=connection):
-    if not codes: return
-    cursor = connection.cursor()
+    if not codes:
+        return
+    cursor = conn.cursor()
     try:
-        cursor.executemany("INSERT INTO demande (num, pos, nature) VALUES (%s,%s,%s)", [(num, i+1, c) for i,c in enumerate(codes)])
-        connection.commit()
-    finally: cursor.close()
+        cursor.executemany(
+            "INSERT INTO demande (num, pos, nature) VALUES (%s,%s,%s)",
+            [(num, i + 1, c) for i, c in enumerate(codes)]
+        )
+        conn.commit()
+    finally:
+        cursor.close()
+
 
 def insert_solutions(num, codes, conn=connection):
     if not codes: return
@@ -130,12 +153,16 @@ def insert_solutions(num, codes, conn=connection):
 # =================================================================
 
 @st.cache_data
+@st.cache_data
 def get_data_for_reporting(conn=connection):
-    cursor = connection.cursor(cursor_factory=RealDictCursor)
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        cursor.execute("SELECT num, date_ent, sexe, age, sit_fam, profession, duree, commune, mode, vient_pr FROM entretien")
+        cursor.execute(
+            "SELECT num, date_ent, sexe, age, sit_fam, profession, duree, commune, mode, vient_pr FROM entretien"
+        )
         return pd.DataFrame(cursor.fetchall())
-    finally: cursor.close()
+    finally:
+        cursor.close()
 
 def to_excel(df):
     output = BytesIO()
