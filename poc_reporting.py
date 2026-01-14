@@ -12,7 +12,7 @@ st.set_page_config(page_title="Reporting Statistique - Maison du Droit", layout=
 # --- Configuration PostgreSQL ---
 PG_HOST = "localhost"
 PG_PORT = 5437
-PG_DB = "DB_Maison_du_droit"
+PG_DB = "db_maisondudroit"
 PG_USER = "pgis"
 PG_PASSWORD = "pgis"
 
