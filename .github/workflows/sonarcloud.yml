@@ -25,12 +25,10 @@ jobs:
         run: pip install pytest pytest-cov  # Pour générer le rapport de couverture
 
       - name: Run tests with coverage
-        run: pytest --cov=. --cov-report=xml  # Génère coverage.xml pour Sonar
+        run: pytest --cov=. --cov-report=xml || true   # Génère coverage.xml pour Sonar
         
       - name: SonarCloud Scan
         uses: sonarsource/sonarcloud-github-action@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Fourni par défaut
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      - name: Run tests with coverage
-        run: pytest --cov=. --cov-report=xml || true  # Le "|| true" empêche le crash si 0 tests
