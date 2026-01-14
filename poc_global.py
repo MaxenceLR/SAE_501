@@ -12,7 +12,7 @@ st.set_page_config(page_title="Maison du Droit - Système Intégré", layout="wi
 # --- PARAMÈTRES DE CONNEXION ---
 PG_HOST = "localhost"
 PG_PORT = 5437
-PG_DB = "db_maisondudroit"
+PG_DB = "DB_maison_du_droit"
 PG_USER = "pgis"
 PG_PASSWORD = "pgis"
 
@@ -93,7 +93,7 @@ def get_demande_solution_modalites():
         cursor.close()
 
 # Fonctions d'insertion (Entretien, Demandes, Solutions)
-def insert_full_entretien(data):
+def insert_full_entretien(data, conn=connection):
     cursor = connection.cursor()
     try:
         cursor.execute("""
@@ -109,7 +109,7 @@ def insert_full_entretien(data):
         return None
     finally: cursor.close()
 
-def insert_demandes(num, codes):
+def insert_demandes(num, codes, conn=connection):
     if not codes: return
     cursor = connection.cursor()
     try:
@@ -117,7 +117,7 @@ def insert_demandes(num, codes):
         connection.commit()
     finally: cursor.close()
 
-def insert_solutions(num, codes):
+def insert_solutions(num, codes, conn=connection):
     if not codes: return
     cursor = connection.cursor()
     try:
@@ -130,7 +130,7 @@ def insert_solutions(num, codes):
 # =================================================================
 
 @st.cache_data
-def get_data_for_reporting():
+def get_data_for_reporting(conn=connection):
     cursor = connection.cursor(cursor_factory=RealDictCursor)
     try:
         cursor.execute("SELECT num, date_ent, sexe, age, sit_fam, profession, duree, commune, mode, vient_pr FROM entretien")
