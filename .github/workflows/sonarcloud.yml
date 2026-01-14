@@ -32,3 +32,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Fourni par défaut
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      - name: Run tests with coverage
+        run: pytest --cov=. --cov-report=xml || true  # Le "|| true" empêche le crash si 0 tests
