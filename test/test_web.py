@@ -1,111 +1,113 @@
+import time
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.chrome.service import Service
-import time
+from webdriver_manager.firefox import GeckoDriverManager
+import os
 
-# ==========================
-# CONFIGURATION
-# ==========================
-APP_URL = "http://localhost:8501"
+APP_URL = "http://localhost:8501/"
 TIMEOUT = 20
 
 # ==========================
-# INITIALISATION DU DRIVER
+# INIT FIREFOX
 # ==========================
-options = webdriver.ChromeOptions()
-options.add_argument("--start-maximized")
+options = webdriver.FirefoxOptions()
+#options.add_argument("--headless")  # mode sans affichage
+options.add_argument("--width=1920")
+options.add_argument("--height=1080")
 
-driver = webdriver.Chrome(
-    service=Service(ChromeDriverManager().install()),
+profile_path = r"H:\Temp\FirefoxProfile"
+os.makedirs(profile_path, exist_ok=True)
+options.profile = profile_path
+
+driver = webdriver.Firefox(
+    service=Service(GeckoDriverManager().install()),
     options=options
 )
 
 wait = WebDriverWait(driver, TIMEOUT)
 
+# ==========================
+# HELPER POUR SELECTBOX STREAMLIT
+# ==========================
+def remplir_selectbox(label, valeur):
+    """
+    Remplit un selectbox Streamlit basé sur l'aria-label.
+    """
+    input_elem = wait.until(
+        EC.element_to_be_clickable((By.CSS_SELECTOR, f"input[aria-label=\"**{label}**\"]"))
+    )
+    input_elem.click()
+    input_elem.clear()
+    input_elem.send_keys(valeur)
+    input_elem.send_keys(Keys.ENTER)
+
+# ==========================
+# TEST FORMULAIRE
+# ==========================
 try:
-    # ==========================
-    # OUVERTURE DE L'APPLICATION
-    # ==========================
+    print("🚀 Ouverture de l'app Streamlit...")
     driver.get(APP_URL)
 
-    # Attendre que le titre soit visible
+    # Attendre le formulaire
     wait.until(
-        EC.presence_of_element_located((By.XPATH, "//*[contains(text(),'Saisie d'Entretien')]"))
+        EC.presence_of_element_located((By.XPATH, "//*[contains(text(),\"📋 Saisie d'Entretien\")]"))
     )
 
     # ==========================
     # REMPLISSAGE DES CHAMPS
     # ==========================
+    remplir_selectbox("MODE", "RDV")
+    remplir_selectbox("DUREE", "- de 15 min")
+    remplir_selectbox("SEXE", "Homme")
+    remplir_selectbox("AGE", "26-40 ans")
+    remplir_selectbox("VIENT_PR", "Soi")
+    remplir_selectbox("SIT_FAM", "Célibataire")
+    remplir_selectbox("ENFANT", "2")
 
-    # Exemple : Champ MODE (selectbox)
-    mode_select = wait.until(
-        EC.element_to_be_clickable((By.XPATH, "//label[contains(.,'Mode')]/following::div[1]"))
-    )
-    mode_select.click()
-    time.sleep(1)
-    mode_select.send_keys("Présentiel")
-    mode_select.send_keys(Keys.ENTER)
+    # Si famille avec enfant, remplir le modèle familial
+    enfant_val = int(driver.find_element(By.CSS_SELECTOR, "input[aria-label='**ENFANT**']").get_attribute("value"))
+    if enfant_val > 0:
+        remplir_selectbox("MODELE_FAM", "Famille traditionnelle")
 
-    # Exemple : Champ AGE (number_input)
-    age_input = driver.find_element(
-        By.XPATH, "//label[contains(.,'Age')]/following::input[1]"
-    )
-    age_input.clear()
-    age_input.send_keys("35")
-
-    # Exemple : Champ COMMUNE (text_input)
-    commune_input = driver.find_element(
-        By.XPATH, "//label[contains(.,'Commune')]/following::input[1]"
-    )
-    commune_input.send_keys("Paris")
+    remplir_selectbox("PROFESSION", "Cadre")
+    remplir_selectbox("RESS", "Salaire")
+    remplir_selectbox("ORIGINE", "3949 NUAD")
+    remplir_selectbox("COMMUNE", "Paris")
 
     # ==========================
-    # DEMANDES (MULTISELECT)
+    # DEMANDES / SOLUTIONS (multiselect)
     # ==========================
-    demande_select = driver.find_element(
-        By.XPATH, "//div[contains(.,'Natures de la demande')]/following::input[1]"
-    )
-    demande_select.send_keys("Information juridique")
-    demande_select.send_keys(Keys.ENTER)
+    demande_input = driver.find_element(By.XPATH, "//div[contains(.,'Natures de la demande')]/following::input[1]")
+    demande_input.send_keys("Droit administratif Droit des étrangers")
+    demande_input.send_keys(Keys.ENTER)
+    demande_input.send_keys("Droit administratif Autre")
+    demande_input.send_keys(Keys.ENTER)
 
-    demande_select.send_keys("Aide administrative")
-    demande_select.send_keys(Keys.ENTER)
-
-    # ==========================
-    # SOLUTIONS (MULTISELECT)
-    # ==========================
-    solution_select = driver.find_element(
-        By.XPATH, "//div[contains(.,'Réponses apportées')]/following::input[1]"
-    )
-    solution_select.send_keys("Orientation")
-    solution_select.send_keys(Keys.ENTER)
+    solution_input = driver.find_element(By.XPATH, "//div[contains(.,'Réponses apportées')]/following::input[1]")
+    solution_input.send_keys("Information")
+    solution_input.send_keys(Keys.ENTER)
 
     # ==========================
-    # SOUMISSION DU FORMULAIRE
+    # BOUTON ENREGISTRER
     # ==========================
-    submit_btn = driver.find_element(
-        By.XPATH, "//button[contains(.,'ENREGISTRER')]"
-    )
+    submit_btn = driver.find_element(By.XPATH, "//button[contains(.,\"ENREGISTRER L'ENTRETIEN\")]")
     submit_btn.click()
 
     # ==========================
     # VERIFICATION DU SUCCÈS
     # ==========================
-    wait.until(
-        EC.presence_of_element_located(
-            (By.XPATH, "//*[contains(text(),'enregistré')]")
-        )
-    )
-
-    print("✅ Test réussi : entretien enregistré")
+    wait.until(EC.presence_of_element_located((By.XPATH, "//*[contains(text(),'enregistré')]")))
+    print("✅ Formulaire testé avec succès !")
 
 except Exception as e:
-    print("❌ Test échoué :", e)
+    print("❌ Échec test formulaire :", e)
+    driver.save_screenshot("erreur_test.png")
+    print("📸 Screenshot enregistré : erreur_test.png")
 
 finally:
-    time.sleep(3)
+    time.sleep(2)
     driver.quit()
