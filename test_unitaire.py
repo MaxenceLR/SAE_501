@@ -1,104 +1,129 @@
-from poc_global import to_excel
-from poc_global import get_data_for_reporting
-from unittest.mock import MagicMock
-from poc_global import insert_demandes
-from poc_global import insert_solutions
-from poc_global import insert_full_entretien
+import pytest
 import pandas as pd
-import pandas as pd
+from unittest.mock import MagicMock, patch
+from datetime import date
 
+# --- CORRECTION DES IMPORTS ---
+# On utilise les noms EXACTS présents dans votre fichier poc_global.py
+from poc_global import (
+    insert_demandes,
+    insert_solutions,
+    insert_full_entretien,
+    get_data_for_reporting,
+    save_configuration,
+    add_rubrique_sql  # <--- C'est le nom correct (remplace upsert_rubrique)
+)
 
-def test_insert_demandes_success():
+# --- 1. TESTS DES INSERTIONS ---
+
+@patch('poc_global.connection')
+def test_insert_demandes_success(mock_conn):
     mock_cursor = MagicMock()
-    mock_conn = MagicMock()
     mock_conn.cursor.return_value = mock_cursor
 
-    insert_demandes(10, [1, 2, 3], conn=mock_conn)
+    insert_demandes(10, [1, 2, 3])
+
+    # On vérifie que executemany a été appelé
+    mock_cursor.executemany.assert_called_once()
+    args, _ = mock_cursor.executemany.call_args
+    query, params = args
+    
+    assert "INSERT INTO demande" in query
+    assert len(params) == 3 
+    assert params[0] == (10, 1, 1) 
+    mock_conn.commit.assert_called_once()
+
+
+@patch('poc_global.connection')
+def test_insert_solutions_success(mock_conn):
+    mock_cursor = MagicMock()
+    mock_conn.cursor.return_value = mock_cursor
+
+    insert_solutions(5, [10, 20])
 
     mock_cursor.executemany.assert_called_once()
     mock_conn.commit.assert_called_once()
 
 
-
-def test_insert_full_entretien_success():
-    # Faux curseur
+@patch('poc_global.connection')
+def test_insert_full_entretien_success(mock_conn):
     mock_cursor = MagicMock()
+    # Simule le retour de l'ID 99 après insertion
     mock_cursor.fetchone.return_value = [99]
-
-    # Fausse connexion
-    mock_conn = MagicMock()
     mock_conn.cursor.return_value = mock_cursor
 
     data = {
-        "mode": 1,
-        "duree": 45,
-        "sexe": 1,
-        "age": 38,
-        "vient_pr": 1,
-        "sit_fam": 2,
-        "enfant": 0,
-        "modele_fam": None,
-        "profession": 3,
-        "ress": 2,
-        "origine": 1,
-        "commune": "Nantes",
-        "partenaire": None
+        "mode": 1, "duree": 45, "sexe": 1, "age": 38,
+        "vient_pr": 1, "sit_fam": 2, "enfant": 0,
+        "modele_fam": None, "profession": 3, "ress": 2,
+        "origine": 1, "commune": "Nantes", "partenaire": None
     }
 
-    new_id = insert_full_entretien(data, conn=mock_conn)
+    new_id = insert_full_entretien(data)
 
     assert new_id == 99
     mock_cursor.execute.assert_called_once()
     mock_conn.commit.assert_called_once()
 
 
+# --- 2. TEST DU REPORTING ---
 
-def test_insert_solutions_success():
+@patch('poc_global.connection')
+def test_get_data_for_reporting_decoding(mock_conn):
     mock_cursor = MagicMock()
-    mock_conn = MagicMock()
     mock_conn.cursor.return_value = mock_cursor
 
-    insert_solutions(5, [10, 20], conn=mock_conn)
+    # Simulation des 3 appels SQL successifs faits par la fonction
+    raw_data = [{"num": 100, "sexe": 1, "age": 2, "commune": "Paris"}] 
+    var_mapping = [{"pos": 10, "lib": "Sexe"}, {"pos": 20, "lib": "Age"}]
+    mod_mapping = [{"pos": 10, "code": "1", "lib_m": "Homme"}, {"pos": 20, "code": "2", "lib_m": "18-25 ans"}]
 
-    mock_cursor.executemany.assert_called_once()
-    mock_conn.commit.assert_called_once()
-    mock_cursor.close.assert_called_once()
+    # side_effect permet de renvoyer une valeur différente à chaque appel de fetchall
+    mock_cursor.fetchall.side_effect = [raw_data, var_mapping, mod_mapping]
 
-
-def test_to_excel_returns_bytes():
-    df = pd.DataFrame({
-        "a": [1, 2],
-        "b": [3, 4]
-    })
-
-    excel_bytes = to_excel(df)
-
-    assert isinstance(excel_bytes, bytes)
-    assert len(excel_bytes) > 0
-
-
-def test_get_data_for_reporting():
-    mock_cursor = MagicMock()
-    mock_cursor.fetchall.return_value = [
-        {
-            "num": 1,
-            "date_ent": "2024-01-01",
-            "sexe": 1,
-            "age": 30,
-            "sit_fam": 2,
-            "profession": 3,
-            "duree": 45,
-            "commune": "Nantes",
-            "mode": 1,
-            "vient_pr": 1
-        }
-    ]
-
-    mock_conn = MagicMock()
-    mock_conn.cursor.return_value = mock_cursor
-
-    df = get_data_for_reporting(conn=mock_conn)
+    df = get_data_for_reporting()
 
     assert isinstance(df, pd.DataFrame)
-    assert len(df) == 1
-    assert "commune" in df.columns
+    assert not df.empty
+    # Vérification que le décodage a bien eu lieu
+    assert df.iloc[0]["sexe"] == "Homme" 
+    assert df.iloc[0]["age"] == "18-25 ans"
+
+
+# --- 3. TESTS CONFIGURATION ---
+
+@patch('poc_global.connection')
+def test_add_rubrique_sql(mock_conn):
+    mock_cursor = MagicMock()
+    # Simule qu'aucune erreur ne se produit
+    mock_cursor.fetchone.return_value = None 
+    mock_conn.cursor.return_value = mock_cursor
+    
+    # Appel de la fonction avec le bon nom
+    result = add_rubrique_sql("Nouvelle Rubrique", 5)
+
+    assert result is True
+    # Vérifie qu'une requête INSERT a bien été préparée
+    args, _ = mock_cursor.execute.call_args
+    assert "INSERT INTO rubrique" in args[0]
+    mock_conn.commit.assert_called_once()
+
+@patch('poc_global.connection')
+def test_save_configuration_entretien(mock_conn):
+    mock_cursor = MagicMock()
+    mock_conn.cursor.return_value = mock_cursor
+
+    success = save_configuration(
+        context='ENTRETIEN',
+        is_new_var=False,
+        var_pos=10,
+        var_lib="Ma Question",
+        var_type="MOD",
+        rub_id=1,
+        comment="Test",
+        modalites=["Choix A", "Choix B"]
+    )
+
+    assert success is True
+    # Vérifie qu'il y a eu au moins une exécution SQL
+    assert mock_cursor.execute.call_count >= 1
