@@ -11,7 +11,7 @@ from poc_global import (
     insert_full_entretien,
     get_data_for_reporting,
     save_configuration,
-    add_rubrique_sql  # <--- C'est le nom correct (remplace upsert_rubrique)
+    upsert_rubrique  # <--- C'est le nom correct (remplace upsert_rubrique)
 )
 
 # --- 1. TESTS DES INSERTIONS ---
@@ -93,20 +93,22 @@ def test_get_data_for_reporting_decoding(mock_conn):
 # --- 3. TESTS CONFIGURATION ---
 
 @patch('poc_global.connection')
-def test_add_rubrique_sql(mock_conn):
+def test_upsert_rubrique(mock_conn):
     mock_cursor = MagicMock()
-    # Simule qu'aucune erreur ne se produit
+    # Simule que la rubrique n'existe pas (None), donc on fera un INSERT
     mock_cursor.fetchone.return_value = None 
     mock_conn.cursor.return_value = mock_cursor
     
-    # Appel de la fonction avec le bon nom
-    result = add_rubrique_sql("Nouvelle Rubrique", 5)
+    # Appel de la nouvelle fonction (old_pos, new_pos, lib)
+    # On imagine qu'on crée une rubrique à la position 5
+    result = upsert_rubrique(5, 5, "Nouvelle Rubrique")
 
     assert result is True
     # Vérifie qu'une requête INSERT a bien été préparée
     args, _ = mock_cursor.execute.call_args
     assert "INSERT INTO rubrique" in args[0]
     mock_conn.commit.assert_called_once()
+
 
 @patch('poc_global.connection')
 def test_save_configuration_entretien(mock_conn):

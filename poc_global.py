@@ -249,17 +249,29 @@ def insert_solutions(num, codes):
     finally: cursor.close()
 
 # --- Fonctions pour la page CONFIGURATION ---
-def add_rubrique_sql(libelle, position):
+def upsert_rubrique(old_pos, new_pos, lib):
     cursor = connection.cursor()
     try:
-        cursor.execute("INSERT INTO rubrique (pos, lib) VALUES (%s, %s)", (position, libelle))
+        # On vérifie si la rubrique existe déjà à cette position (old_pos)
+        cursor.execute("SELECT 1 FROM rubrique WHERE pos = %s", (old_pos,))
+        exists = cursor.fetchone()
+        
+        if exists:
+            # Si elle existe, c'est une MISE À JOUR (UPDATE)
+            cursor.execute("UPDATE rubrique SET pos = %s, lib = %s WHERE pos = %s", (new_pos, lib, old_pos))
+        else:
+            # Sinon, c'est une CRÉATION (INSERT)
+            cursor.execute("INSERT INTO rubrique (pos, lib) VALUES (%s, %s)", (new_pos, lib))
+        
         connection.commit()
-        st.cache_data.clear() # IMPORTANT: Vider le cache pour voir le changement
+        st.cache_data.clear() # On vide le cache pour voir les changements
         return True
     except Exception as e:
         connection.rollback()
         st.error(f"Erreur SQL Rubrique : {e}")
         return False
+    finally:
+        cursor.close()
 
 def add_variable_sql(libelle, type_v, rubrique_id, position, commentaire):
     cursor = connection.cursor()
