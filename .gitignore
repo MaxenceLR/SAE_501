@@ -1,0 +1,13 @@
+# Fichiers compilés Python
+__pycache__/
+*.pyc
+
+# Caches de tests
+.pytest_cache/
+
+# Fichiers système et IDE
+.vscode/
+.idea/
+
+# (Optionnel) Si vous ne voulez pas envoyer votre brouillon Jupyter
+Partie2sae.ipynb
