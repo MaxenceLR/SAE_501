@@ -49,12 +49,12 @@ def remplir_selectbox(label, valeur):
 # TEST FORMULAIRE
 # ==========================
 try:
-    print("🚀 Ouverture de l'app Streamlit...")
+    print("Ouverture de l'app Streamlit...")
     driver.get(APP_URL)
 
     # Attendre le formulaire
     wait.until(
-        EC.presence_of_element_located((By.XPATH, "//*[contains(text(),\"📋 Saisie d'Entretien\")]"))
+        EC.presence_of_element_located((By.XPATH, "//*[contains(text(),\"Saisie d'un nouvel entretien\")]"))
     )
 
     # ==========================
@@ -77,17 +77,18 @@ try:
     remplir_selectbox("RESS", "Salaire")
     remplir_selectbox("ORIGINE", "3949 NUAD")
     remplir_selectbox("COMMUNE", "Paris")
+    remplir_selectbox("PARTENAIRE", "CAF")
 
     # ==========================
     # DEMANDES / SOLUTIONS (multiselect)
     # ==========================
-    demande_input = driver.find_element(By.XPATH, "//div[contains(.,'Natures de la demande')]/following::input[1]")
+    demande_input = driver.find_element(By.XPATH, "//div[contains(.,'Nature de la demande')]/following::input[1]")
     demande_input.send_keys("Droit administratif Droit des étrangers")
     demande_input.send_keys(Keys.ENTER)
     demande_input.send_keys("Droit administratif Autre")
     demande_input.send_keys(Keys.ENTER)
 
-    solution_input = driver.find_element(By.XPATH, "//div[contains(.,'Réponses apportées')]/following::input[1]")
+    solution_input = driver.find_element(By.XPATH, "//div[contains(.,'Réponse apportée')]/following::input[1]")
     solution_input.send_keys("Information")
     solution_input.send_keys(Keys.ENTER)
 
